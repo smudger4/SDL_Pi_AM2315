@@ -75,7 +75,7 @@ def read_sensor(sensor):
     return payload
 
 
-def main(sensor_name, endpoint, cert, root_ca, key, particle_sensor, debug_flag):
+def main(sensor_name, endpoint, cert, root_ca, key, debug_flag):
     if (debug_flag):
         logging.basicConfig(level=logging.DEBUG)
     else:
@@ -145,4 +145,4 @@ if __name__ == "__main__":
     # parse command line
     args = my_parser.parse_args()
 
-    main(args.sensor_name, args.endpoint, args.cert, args.root_ca, args.key, args.particle, args.debug)
+    main(args.sensor_name, args.endpoint, args.cert, args.root_ca, args.key, args.debug)
