@@ -9,12 +9,9 @@ import threading
 import AM2315
 from uuid import uuid4
 
-
-# constants
-CYCLE_PERIOD = 5
-TOPIC_ROOT = "$aws/rules"
-RULE_NAME = "log_metriful"
-SITE_NAME = "bugsby"
+# defaults
+DEFAULT_CYCLE_PERIOD = 5
+DEFAULT_TOPIC_ROOT = "$aws/rules"
 
 # globals
 log = logging.getLogger("mqtt_publisher")
@@ -75,7 +72,7 @@ def read_sensor(sensor):
     return payload
 
 
-def main(sensor_name, endpoint, cert, root_ca, key, debug_flag):
+def main(sensor_name, endpoint, site_name, rule_name, topic_root, cert, root_ca, key, cycle_period, debug_flag):
     if (debug_flag):
         logging.basicConfig(level=logging.DEBUG)
     else:
@@ -109,7 +106,7 @@ def main(sensor_name, endpoint, cert, root_ca, key, debug_flag):
 
     # initialise & start sensor
     sensor = AM2315.AM2315()
-    topic_name = "{}/{}/{}/{}".format(TOPIC_ROOT, RULE_NAME, SITE_NAME, sensor_name)
+    topic_name = "{}/{}/{}/{}".format(topic_root, rule_name, site_name, sensor_name)
     while True:
         # read payload from sensor
         payload = read_sensor(sensor)
@@ -119,8 +116,7 @@ def main(sensor_name, endpoint, cert, root_ca, key, debug_flag):
             topic=topic_name,
             payload=json.dumps(payload),
             qos=mqtt.QoS.AT_LEAST_ONCE)
-        time.sleep(CYCLE_PERIOD)
-
+        time.sleep(cycle_period)
 
 
 if __name__ == "__main__":
@@ -132,6 +128,9 @@ if __name__ == "__main__":
     my_parser.add_argument('--sensor-name', required=True, type=str, help='Name of this sensor')
     my_parser.add_argument('--endpoint', required=True, help="Your AWS IoT custom endpoint, not including a port. " +
                                                       "Ex: \"abcd123456wxyz-ats.iot.us-east-1.amazonaws.com\"")
+    my_parser.add_argument('--site-name', required=True, help="Site name for AWS IoT connection.")
+    my_parser.add_argument('--rule-name', required=True, help="IoT Rule name for AWS IoT connection.")
+
     my_parser.add_argument('--cert', required=True, help="File path to your client certificate, in PEM format.")
     my_parser.add_argument('--key', required=True, help="File path to your private key, in PEM format.")
     my_parser.add_argument('--root-ca', required=True, help="File path to root certificate authority, in PEM format. " +
@@ -139,10 +138,18 @@ if __name__ == "__main__":
                                         "your trust store.")
 
     # optional
-    my_parser.add_argument('--client-id', default="test-" + str(uuid4()), help="Client ID for MQTT connection.")
+    my_parser.add_argument('--topic-root', default=DEFAULT_TOPIC_ROOT, help="MQTT Topic root for AWS IoT connection.")
+    my_parser.add_argument('--cycle_period', default=DEFAULT_CYCLE_PERIOD, help="How frequently to read sensor, in seconds.")
     my_parser.add_argument('-d', '--debug', action='store_true', help='Debug level logging')
 
     # parse command line
     args = my_parser.parse_args()
 
-    main(args.sensor_name, args.endpoint, args.cert, args.root_ca, args.key, args.debug)
+    # check if cycle period provided parses to an int
+    try:
+        cycle_period = int(args.cycle_period)
+    except TypeError:
+        log.error("cycle-period argument must be an integer - defaulting to %s seconds" % DEFAULT_CYCLE_PERIOD)
+        cycle_period = DEFAULT_CYCLE_PERIOD
+
+    main(args.sensor_name, args.endpoint, args.site_name, args.rule_name, args.topic_root, args.cert, args.root_ca, args.key, cycle_period, args.debug)
