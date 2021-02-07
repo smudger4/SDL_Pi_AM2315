@@ -96,7 +96,7 @@ def main(sensor_name, endpoint, site_name, rule_name, topic_root, cert, root_ca,
         keep_alive_secs=6)
 
     print("Connecting to {} with client ID '{}'...".format(
-        args.endpoint, args.client_id))
+        endpoint, sensor_name))
 
     connect_future = mqtt_connection.connect()
 
