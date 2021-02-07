@@ -3,9 +3,9 @@
 #
 # AM2315 Pure Python Library
 
-## Forked from SwitchDoc Labs March 2019 version in February 2021
+### Forked from SwitchDoc Labs March 2019 version in February 2021
 
-This is a forked of the SwitchDoc Labs AM2315 library. This fork fixes problems in the original library code
+This is a fork of the SwitchDoc Labs AM2315 library. This fork fixes problems in the original library code
 that prevented it from running under Python 3 & adds a client that sends the readings from the sensor to [AWS IoT Core](https://aws.amazon.com/iot-core/). It makes use of the [AWS IoT Client SDK](https://github.com/aws/aws-iot-device-sdk-python-v2) to connect & send messages to IoT Core and requires credentials to be created as detailed in the [Developers Guide](https://docs.aws.amazon.com/iot/latest/developerguide/create-iot-resources.html).
 
 ## Dependencies
@@ -23,7 +23,7 @@ pip3 install -r requirements.txt
 ```
 
 
-## Version history prior to fork
+## Version history & documentatation prior to fork
 Version 1.6:  August 12, 2019 - Added adasmbus and improved I2C reliablity<BR>
 Version 1.5:  June 6, 2019 - Moved to adasmbus and improved I2C reliablity<BR>
 Version 1.4:  March 30, 2019 - Added PowerSave capability and improved temperature detection<BR>
