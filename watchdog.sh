@@ -8,4 +8,3 @@ if ! (systemctl -q is-active awsiot-service) then
     #curl -X EXECUTE -u "$INDIGO_USER:$INDIGO_PASSWORD" --digest http://russ.home:8176/actions/reset-garden-sensor-delayed
     #halt
 fi
-
