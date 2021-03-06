@@ -10,6 +10,7 @@
 
 if ! (/usr/bin/systemctl -q is-active awsiot_service) then
     /usr/bin/logger "[watchdog] awsiot_service is inactive - halting"
+    curl $NOTIFY_URL/message\?name\=garden-sensor\&message\=Garden%20temp%20sensor%20being%20restarted
     #/usr/bin/curl -X EXECUTE -u "$INDIGO_USER:$INDIGO_PASSWORD" --digest $INDIGO_URL
     #/usr/sbin/halt
 fi
