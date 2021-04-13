@@ -67,6 +67,9 @@ def read_sensor(sensor):
                     
     payload['humidity'] = "{:.2f}".format(humidity)
     payload['temperature'] = "{:.2f}".format(temperature)
+
+    # add timestamp
+    payload['timestamp'] = str(time.time_ns() // 1_000_000)
     
     log.debug(json.dumps(payload))
     return payload
