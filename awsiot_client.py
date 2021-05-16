@@ -10,12 +10,25 @@ import AM2315
 from uuid import uuid4
 
 # defaults
-DEFAULT_CYCLE_PERIOD = 5
-DEFAULT_TOPIC_ROOT = "$aws/rules"
+CONFIG_FILE = './config.json'
 
 # globals
-log = logging.getLogger("mqtt_publisher")
+config = {}
+log = logging.getLogger("awsiot_service")
 simulation = False
+
+def initialise(config_dict, config_file):
+    log.info("initialising")
+    # load config from file
+    with open(config_file) as json_file:
+        imported_config = json.load(json_file)
+        for key, value in imported_config.items():
+            config_dict[key] = value
+
+    log.debug("config: '%s'" % json.dumps(config, indent=4))
+
+    log.info("initialised")
+
 
 # Callback when connection is accidentally lost.
 def on_connection_interrupted(connection, error, **kwargs):
@@ -65,8 +78,8 @@ def read_sensor(sensor):
     payload = {}
     humidity, temperature = sensor.read_humidity_temperature()
                     
-    payload['humidity'] = "{:.2f}".format(humidity)
-    payload['temperature'] = "{:.2f}".format(temperature)
+    payload['humidity'] = "{:.1f}".format(humidity)
+    payload['temperature'] = "{:.1f}".format(temperature)
 
     # add timestamp
     payload['timestamp'] = str(time.time_ns() // 1_000_000)
@@ -75,51 +88,47 @@ def read_sensor(sensor):
     return payload
 
 
-def main(sensor_name, endpoint, site_name, rule_name, topic_root, cert, root_ca, key, cycle_period, debug_flag):
-    if (debug_flag):
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
-
+def main():
     # Spin up resources
     event_loop_group = io.EventLoopGroup(1)
     host_resolver = io.DefaultHostResolver(event_loop_group)
     client_bootstrap = io.ClientBootstrap(event_loop_group, host_resolver)
 
     mqtt_connection = mqtt_connection_builder.mtls_from_path(
-        endpoint=endpoint,
-        cert_filepath=cert,
-        pri_key_filepath=key,
+        endpoint=config['endpoint'],
+        cert_filepath=config['cert'],
+        pri_key_filepath=config['key'],
         client_bootstrap=client_bootstrap,
-        ca_filepath=root_ca,
+        ca_filepath=config['root-ca'],
         on_connection_interrupted=on_connection_interrupted,
         on_connection_resumed=on_connection_resumed,
-        client_id=sensor_name,
+        client_id=config['sensor-name'],
         clean_session=False,
         keep_alive_secs=6)
 
-    print("Connecting to {} with client ID '{}'...".format(
-        endpoint, sensor_name))
+    log.info("Connecting to {} with client ID '{}'...".format(
+        config['endpoint'], config['sensor-name']))
 
     connect_future = mqtt_connection.connect()
 
     # Future.result() waits until a result is available
     connect_future.result()
-    print("Connected!")
+    log.info("Connected!")
 
     # initialise & start sensor
     sensor = AM2315.AM2315()
-    topic_name = "{}/{}/{}/{}".format(topic_root, rule_name, site_name, sensor_name)
+    topic_name = "{}/{}/{}/{}".format(config['topic-root'], config['site-name'], config['location'], config['sensor-name'])
+
     while True:
         # read payload from sensor
         payload = read_sensor(sensor)
-        payload['location'] = sensor_name
+        payload['location'] = config['location']
         print("Publishing message to topic '{}': {}".format(topic_name, json.dumps(payload)))
         mqtt_connection.publish(
             topic=topic_name,
             payload=json.dumps(payload),
             qos=mqtt.QoS.AT_LEAST_ONCE)
-        time.sleep(cycle_period)
+        time.sleep(config['cycle-period'])
 
 
 if __name__ == "__main__":
@@ -128,31 +137,25 @@ if __name__ == "__main__":
 
     # Add the arguments
     # mandatory
-    my_parser.add_argument('--sensor-name', required=True, type=str, help='Name of this sensor')
-    my_parser.add_argument('--endpoint', required=True, help="Your AWS IoT custom endpoint, not including a port. " +
-                                                      "Ex: \"abcd123456wxyz-ats.iot.us-east-1.amazonaws.com\"")
-    my_parser.add_argument('--site-name', required=True, help="Site name for AWS IoT connection.")
-    my_parser.add_argument('--rule-name', required=True, help="IoT Rule name for AWS IoT connection.")
-
-    my_parser.add_argument('--cert', required=True, help="File path to your client certificate, in PEM format.")
-    my_parser.add_argument('--key', required=True, help="File path to your private key, in PEM format.")
-    my_parser.add_argument('--root-ca', required=True, help="File path to root certificate authority, in PEM format. " +
-                                        "Necessary if MQTT server uses a certificate that's not already in " +
-                                        "your trust store.")
+    my_parser.add_argument('--config-file', default='./config.json', type=str, help='File path to JSON configuration file')
 
     # optional
-    my_parser.add_argument('--topic-root', default=DEFAULT_TOPIC_ROOT, help="MQTT Topic root for AWS IoT connection.")
-    my_parser.add_argument('--cycle_period', default=DEFAULT_CYCLE_PERIOD, help="How frequently to read sensor, in seconds.")
     my_parser.add_argument('-d', '--debug', action='store_true', help='Debug level logging')
+    my_parser.add_argument('-s', '--simulate', action='store_true', help='Simulation mode (no sensor)')
 
     # parse command line
     args = my_parser.parse_args()
 
-    # check if cycle period provided parses to an int
-    try:
-        cycle_period = int(args.cycle_period)
-    except TypeError:
-        log.error("cycle-period argument must be an integer - defaulting to %s seconds" % DEFAULT_CYCLE_PERIOD)
-        cycle_period = DEFAULT_CYCLE_PERIOD
+    # set simulation mode
+    simulation = args.simulate
 
-    main(args.sensor_name, args.endpoint, args.site_name, args.rule_name, args.topic_root, args.cert, args.root_ca, args.key, cycle_period, args.debug)
+    # set log level
+    if (args.debug):
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    initialise(config, args.config_file)
+    log.info("running")
+
+    main()

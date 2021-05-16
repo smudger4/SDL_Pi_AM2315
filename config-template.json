@@ -1,0 +1,12 @@
+{
+    "sensor-name": "<Name of this sensor>",
+    "endpoint": "<AWS IoT custom endpoint URL>",
+    "site-name": "<Site name for AWS IoT connection>",
+    "location": "<Location of sensor>",
+    "rule-name": "<IoT Rule name for AWS IoT connection>",
+    "cert": "<File path to your client certificate, in PEM format>",
+    "key": "<File path to your private key, in PEM format>",
+    "root-ca": "<File path to root certificate authority, in PEM format>",
+    "cycle-period": 30,
+    "topic-root": "$aws/rules"
+}
